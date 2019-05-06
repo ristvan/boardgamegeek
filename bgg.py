@@ -21,8 +21,16 @@ class Player:
         self.is_win = False
 
     def __str__(self):
-        return "{}/{}/{}/{}/{}/{}/{}/{}".format(self.user_id, self.play_id, self.name, self.score, self.starting_position,
-                                          self.rating, self.is_new, self.is_win)
+        return "uid={}/{}/{}/{}/{}/{}/{}/{}".format(
+            self.user_id,
+            self.play_id,
+            self.name,
+            self.score,
+            self.starting_position,
+            self.rating,
+            self.is_new,
+            self.is_win
+        )
 
 
 class Game:
