@@ -1,22 +1,16 @@
 import xml.etree.ElementTree
 import urllib.request
-import threading
 import time
 import logging
 
+from bgg.game import Game
 from bgg.player import Player
 
+# logging.basicConfig(level=logging.DEBUG,
+#                     format='[%(levelname)s] (%(threadName)s) %(message)s')
+
 logging.basicConfig(level=logging.DEBUG,
-                    format='[%(levelname)s] (%(threadName)s) %(message)s')
-
-class Game:
-    def __init__(self):
-        self.name = None
-        self.id = None
-
-    def __str__(self):
-        return "(Game)id={} - name={}".format(self.id, self.name)
-
+                    format='%(asctime)s [%(levelname)s] %(funcName)s - %(message)s')
 
 def worker():
     logging.debug("Starting")
@@ -106,14 +100,9 @@ for child in root.iter("plays"):
     plays = child
 
 counter = 0
-for play_node in plays.iter("play"):
-    print_attributes(play_node)
-    counter += 1
-    for game_node in play_node.iter("item"):
-        game = Game()
-        game.name = game_node.get("name")
-        game.id = game_node.get("objectid")
-    logging.info(str(game))
+
+
+def read_players(play_node):
     players = list()
     for player_node in play_node.iter("player"):
         player = Player()
@@ -130,6 +119,18 @@ for play_node in plays.iter("play"):
 
         # print_attributes(player_node)
         players.append(str(player))
+    return players
+
+
+for play_node in plays.iter("play"):
+    print_attributes(play_node)
+    counter += 1
+    game = Game()
+    for game_node in play_node.iter("item"):
+        game.name = game_node.get("name")
+        game.id = game_node.get("objectid")
+    logging.info(str(game))
+    players = read_players(play_node)
     break
 logging.info(str(players))
 
