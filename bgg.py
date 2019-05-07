@@ -4,34 +4,10 @@ import threading
 import time
 import logging
 
+from bgg.player import Player
 
 logging.basicConfig(level=logging.DEBUG,
                     format='[%(levelname)s] (%(threadName)s) %(message)s')
-
-
-class Player:
-    def __init__(self):
-        self.user_id = None
-        self.play_id = None
-        self.score = None
-        self.name = None
-        self.starting_position = None
-        self.rating = None
-        self.is_new = False
-        self.is_win = False
-
-    def __str__(self):
-        return "uid={}/{}/{}/{}/{}/{}/{}/{}".format(
-            self.user_id,
-            self.play_id,
-            self.name,
-            self.score,
-            self.starting_position,
-            self.rating,
-            self.is_new,
-            self.is_win
-        )
-
 
 class Game:
     def __init__(self):
@@ -39,7 +15,7 @@ class Game:
         self.id = None
 
     def __str__(self):
-        return "{} - {}".format(self.id, self.name)
+        return "(Game)id={} - name={}".format(self.id, self.name)
 
 
 def worker():
@@ -69,13 +45,50 @@ def my_service():
 #
 # logging.info("EXIT")
 
+def bgg_getter_function():
+    BGG_API_URL = "https://www.boardgamegeek.com/xmlapi2"
+    url_format = "{rest_api_url}/{endpoint}?{parameters}"
+    url = url_format.format(
+        rest_api_url=BGG_API_URL,
+        endpoint="plays",
+        parameters="username=ristvan"
+    )
+    response = urllib.request.urlopen(url)
+    return response
 
-response = urllib.request.urlopen("https://www.boardgamegeek.com/xmlapi2/plays?username=ristvan")
-# raw_response = response.read()
-# print(raw_response)
 
-tree = xml.etree.ElementTree.parse(response)
-root = tree.getroot()
+xml_lines = [
+    '<plays username="ristvan" userid="247009" total="2039" page="1" termsofuse="https://boardgamegeek.com/xmlapi/termsofuse">',
+    '    <play id="33070661" date="2019-01-05" quantity="1" length="0" incomplete="0" nowinstats="0" location="Otthon">',
+    '        <item name="Sanssouci" objecttype="thing" objectid="146816">',
+    '            <subtypes>',
+    '                <subtype value="boardgame"/>',
+    '            </subtypes>',
+    '        </item>',
+    '        <players>',
+    '            <player username="Detti76" userid="237335" name="Detti" startposition="1" color="Red" score="86" new="0" rating="0" win="0"/>',
+    '            <player username="ristvan" userid="247009" name="Isti" startposition="2" color="Blue" score="89" new="0" rating="0" win="1"/>',
+    '        </players>',
+    '    </play>',
+    '    <play id="33038839" date="2019-01-04" quantity="1" length="0" incomplete="0" nowinstats="0" location="Dundánál">',
+    '        <item name="Gùgōng" objecttype="thing" objectid="250458">',
+    '            <subtypes>',
+    '                <subtype value="boardgame"/>',
+    '            </subtypes>',
+    '        </item>',
+    '        <players>',
+    '            <player username="Dunda" userid="124020" name="Dunda" startposition="1" color="Orange" score="28" new="0" rating="0" win="0"/>',
+    '            <player username="Detti76" userid="237335" name="Detti" startposition="2" color="Pink" score="35" new="0" rating="0" win="0"/>',
+    '            <player username="ristvan" userid="247009" name="Isti" startposition="3" color="Red" score="48" new="0" rating="0" win="1"/>',
+    '            <player username="PZS69" userid="442494" name="PZs" startposition="4" color="Blue" score="32" new="0" rating="0" win="0"/>',
+    '        </players>',
+    '    </play>',
+    '</plays>'
+]
+
+# tree = xml.etree.ElementTree.parse(bgg_getter_function())
+# root = tree.getroot()
+root = xml.etree.ElementTree.fromstringlist(xml_lines)
 
 
 def print_attributes(node):
@@ -83,7 +96,6 @@ def print_attributes(node):
         logging.debug("{} - {}".format(root_attrib_key, root_attrib_value))
 
 
-print_attributes(root)
 username = root.get("username")
 userid = int(root.get("userid"))
 total_number_of_plays = int(root.get("total"))
@@ -95,16 +107,15 @@ for child in root.iter("plays"):
 
 counter = 0
 for play_node in plays.iter("play"):
-    print(play_node)
     print_attributes(play_node)
     counter += 1
     for game_node in play_node.iter("item"):
         game = Game()
         game.name = game_node.get("name")
         game.id = game_node.get("objectid")
-    print(str(game))
+    logging.info(str(game))
+    players = list()
     for player_node in play_node.iter("player"):
-        print(player_node)
         player = Player()
         player.user_id = int(player_node.get("userid"))
         player.name = player_node.get("username")
@@ -112,12 +123,14 @@ for play_node in plays.iter("play"):
         player.score = int(player_node.get("score"))
         sp = player_node.get("startposition")
         player.starting_position = int(sp if len(sp) > 0 else "0")
+        player.color = player_node.get("color")
         player.rating = int(player_node.get("rating"))
-        is_new = bool(player_node.get("new"))
-        is_win = bool(player_node.get("win"))
+        player.is_new = bool(int(player_node.get("new")))
+        player.is_win = bool(int(player_node.get("win")))
 
-        print_attributes(player_node)
-        print(str(player))
+        # print_attributes(player_node)
+        players.append(str(player))
     break
+logging.info(str(players))
 
-print(counter)
+logging.debug("number of plays = {}".format(counter))
