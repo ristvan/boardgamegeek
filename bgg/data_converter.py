@@ -1,7 +1,7 @@
 import logging
-from bgg.game import Game
-from bgg.player import Player
-from bgg.user import User
+from bgg.data.game import Game
+from bgg.data.player import Player
+from bgg.data.user import User
 
 
 class DataConverter:
