@@ -1,4 +1,3 @@
-import time
 import logging
 from bgg.data_fetcher import DataFetcher
 from bgg.data_converter import DataConverter
@@ -6,31 +5,53 @@ from bgg.data_holder import DataHolder
 
 import threading
 
-# logging.basicConfig(level=logging.DEBUG,
-#                     format='[%(levelname)s] (%(threadName)s) %(message)s')
-
 logging.basicConfig(
     level=logging.DEBUG,
     format='%(asctime)s [%(levelname)s] (%(threadName)s) %(funcName)s - %(message)s'
 )
 
 
-class MyThread(threading.Thread):
+class DataCollectorThread(threading.Thread):
+    def __init__(self, name=None):
+        threading.Thread.__init__(
+            self,
+            # group=group,
+            # target=target,
+            name=name,
+            # verbose=verbose
+        )
+
     def run(self) -> None:
-        df = DataFetcher()
-        dh = DataHolder()
-        dc = DataConverter(data_fetcher=df, data_holder=dh)
-        dc.convert()
+        data_converter = DataConverter(
+            data_fetcher=DataFetcher(),
+            data_holder=DataHolder()
+        )
+        data_converter.convert()
 
 
-logging.info("START")
+class DataStorageThread(threading.Thread):
+    def __init__(self, name=None):
+        threading.Thread.__init__(
+            self,
+            name=name,
+        )
 
-thr = MyThread()
-thr.start()
+    def run(self) -> None:
+        logging.info("Running")
 
-main_thread = threading.currentThread()
-for t in threading.enumerate():
-    if t is not main_thread:
-        t.join()
 
-logging.info("EXIT")
+if __name__ == "__main__":
+    logging.info("START")
+
+    data_collector_thread: DataCollectorThread = DataCollectorThread(name="DataCollector")
+    data_collector_thread.start()
+
+    data_storage_thread: DataStorageThread = DataStorageThread(name="DataStorage")
+    data_storage_thread.start()
+
+    main_thread = threading.currentThread()
+    for thread in threading.enumerate():
+        if thread is not main_thread:
+            thread.join()
+
+    logging.info("EXIT")
