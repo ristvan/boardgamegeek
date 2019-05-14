@@ -13,7 +13,7 @@ logging.basicConfig(
 
 
 class DataCollectorThread(threading.Thread):
-    def __init__(self, name=None, queue=None):
+    def __init__(self, name=None, communication_channel_factory=None):
         threading.Thread.__init__(
             self,
             # group=group,
@@ -21,28 +21,26 @@ class DataCollectorThread(threading.Thread):
             name=name,
             # verbose=verbose
         )
-        self._queue = queue
+        self._communication_channel_factory = communication_channel_factory
 
     def run(self) -> None:
         data_converter = DataConverter(
             data_fetcher=DataFetcher(),
-            data_holder=DataHolder()
+            data_holder=DataHolder(data_storage_factory=self._communication_channel_factory)
         )
         data_converter.convert()
-        self._queue.put("hello")
-        self._queue.put("world")
-        self._queue.put("fasfa")
-        self._queue.put("QUIT")
+        queue = self._communication_channel_factory.create_communication_channel()
+        queue.send("QUIT")
         logging.debug("Messages are sent")
 
 
 class DataStorageThread(threading.Thread):
-    def __init__(self, name=None, queue=None):
+    def __init__(self, name=None, communication_channel_factory=None):
         threading.Thread.__init__(
             self,
             name=name,
         )
-        self._queue = queue
+        self._queue = communication_channel_factory.create_communication_channel()
 
     def run(self) -> None:
         logging.info("Start")
@@ -54,15 +52,40 @@ class DataStorageThread(threading.Thread):
         logging.info("Finish")
 
 
+class CommunicationChannelFactory:
+    _communication_channel = None
+
+    class QueueWrapper:
+        def __init__(self):
+            self.queue = Queue(maxsize=1)
+
+        def send(self, message):
+            self.queue.put(message)
+
+        def get(self):
+            return self.queue.get()
+
+    def create_communication_channel(self):
+        if self._communication_channel is None:
+            self._communication_channel = CommunicationChannelFactory.QueueWrapper()
+        return self._communication_channel
+
+
 if __name__ == "__main__":
     logging.info("START")
 
-    cq = Queue(maxsize=1)
+    ccf = CommunicationChannelFactory()
 
-    data_collector_thread: DataCollectorThread = DataCollectorThread(name="DataCollector", queue=cq)
+    data_collector_thread: DataCollectorThread = DataCollectorThread(
+        name="DataCollector",
+        communication_channel_factory=ccf
+    )
     data_collector_thread.start()
 
-    data_storage_thread: DataStorageThread = DataStorageThread(name="DataStorage", queue=cq)
+    data_storage_thread: DataStorageThread = DataStorageThread(
+        name="DataStorage",
+        communication_channel_factory=ccf
+    )
     data_storage_thread.start()
 
     main_thread = threading.currentThread()
