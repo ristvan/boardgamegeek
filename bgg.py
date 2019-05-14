@@ -4,6 +4,7 @@ from bgg.data_converter import DataConverter
 from bgg.data_holder import DataHolder
 
 import threading
+from queue import Queue
 
 logging.basicConfig(
     level=logging.DEBUG,
@@ -12,7 +13,7 @@ logging.basicConfig(
 
 
 class DataCollectorThread(threading.Thread):
-    def __init__(self, name=None):
+    def __init__(self, name=None, queue=None):
         threading.Thread.__init__(
             self,
             # group=group,
@@ -20,6 +21,7 @@ class DataCollectorThread(threading.Thread):
             name=name,
             # verbose=verbose
         )
+        self._queue = queue
 
     def run(self) -> None:
         data_converter = DataConverter(
@@ -27,26 +29,40 @@ class DataCollectorThread(threading.Thread):
             data_holder=DataHolder()
         )
         data_converter.convert()
+        self._queue.put("hello")
+        self._queue.put("world")
+        self._queue.put("fasfa")
+        self._queue.put("QUIT")
+        logging.debug("Messages are sent")
 
 
 class DataStorageThread(threading.Thread):
-    def __init__(self, name=None):
+    def __init__(self, name=None, queue=None):
         threading.Thread.__init__(
             self,
             name=name,
         )
+        self._queue = queue
 
     def run(self) -> None:
-        logging.info("Running")
+        logging.info("Start")
+        while True:
+            h = self._queue.get()
+            logging.debug(str(h))
+            if h == "QUIT":
+                break
+        logging.info("Finish")
 
 
 if __name__ == "__main__":
     logging.info("START")
 
-    data_collector_thread: DataCollectorThread = DataCollectorThread(name="DataCollector")
+    cq = Queue(maxsize=1)
+
+    data_collector_thread: DataCollectorThread = DataCollectorThread(name="DataCollector", queue=cq)
     data_collector_thread.start()
 
-    data_storage_thread: DataStorageThread = DataStorageThread(name="DataStorage")
+    data_storage_thread: DataStorageThread = DataStorageThread(name="DataStorage", queue=cq)
     data_storage_thread.start()
 
     main_thread = threading.currentThread()
