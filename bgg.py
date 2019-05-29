@@ -4,7 +4,8 @@ from bgg.data_converter import DataConverter
 from bgg.data_holder import DataHolder
 
 import threading
-from queue import Queue
+
+from bgg.message_broker.communication_channel_factory import CommunicationChannelFactory
 
 logging.basicConfig(
     level=logging.DEBUG,
@@ -50,25 +51,6 @@ class DataStorageThread(threading.Thread):
             if h == "QUIT":
                 break
         logging.info("Finish")
-
-
-class CommunicationChannelFactory:
-    _communication_channel = None
-
-    class QueueWrapper:
-        def __init__(self):
-            self.queue = Queue(maxsize=1)
-
-        def send(self, message):
-            self.queue.put(message)
-
-        def get(self):
-            return self.queue.get()
-
-    def create_communication_channel(self):
-        if self._communication_channel is None:
-            self._communication_channel = CommunicationChannelFactory.QueueWrapper()
-        return self._communication_channel
 
 
 if __name__ == "__main__":
